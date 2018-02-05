@@ -1,25 +1,72 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "assignment"
+output: html_document
 ---
 
 
-## Loading and preprocessing the data
+###Load the data from the excel sheet and then refine it into data table
+
+```{r}
+
+activity<-read.csv("activity.csv",stringsAsFactors = FALSE)
+data<-activity[is.na(activity$steps)==FALSE,]  # removing all NA in steps
+library(data.table)
+dataRefined<-data.table(data)
+summary(dataRefined)
+```
+
+#Steps per day Histogram
 
 
 
-## What is mean total number of steps taken per day?
+```{r}
+
+stepsPerDay<-dataRefined[,sum(steps),by=date]
+names(stepsPerDay)<-c("date","steps")
+barplot(stepsPerDay$steps,names.arg = factor(stepsPerDay$date),col = "blue",main = "Steps per day")
+summary(stepsPerDay$steps)
+
+```
 
 
+#Average steps 
 
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
+###Average steps taken with respect to interval
 
 
+```{r}
 
-## Are there differences in activity patterns between weekdays and weekends?
+avgSteps<-dataRefined[,sum(steps),by=interval] 
+names(avgSteps)<-c("interval","avg")
+with(avgSteps,plot(interval,avg,main = "Interval Vs Average Steps",type = 'l'))
+maxSteps<-avgSteps[avgSteps$avg==max(avgSteps$avg),]
+```
+
+# Including NA values and finding reproducing the result as in first case
+
+```{r}
+
+nrow(activity[is.na(activity$steps)==TRUE,])
+new<-activity
+new$steps[is.na(new$steps)]<-mean(subset(new,date=new$date)$steps,na.rm = T)
+new<-data.table(new)
+stepsPerdayNew<-new[,sum(steps),by=date]
+names(stepsPerdayNew)<-c("date","steps")
+barplot(stepsPerdayNew$steps,,names.arg = stepsPerdayNew$date,main = "Steps per day including NA values",col="blue")
+```
+
+##Mean is up by a unit and median remains unchanged
+```{r}
+summary(stepsPerdayNew$steps)
+summary(stepsPerDay$steps)
+```
+
+
+##Are there differences in activity patterns between weekdays and weekends?
+```{r}
+dataRefined$day<-ifelse(weekdays(as.Date(dataRefined$date)) %in% c("Saturday","Sunday"),"Weekend","weekDay")
+weekData<-aggregate(x = dataRefined$steps,list(dataRefined$day,as.numeric(dataRefined$interval)),FUN=mean)
+names(weekData)<-c("day","interval","avgSteps")
+library(lattice)
+xyplot(weekData$avgSteps~weekData$interval|weekData$day,layout=c(1,2),type="l")
+```
